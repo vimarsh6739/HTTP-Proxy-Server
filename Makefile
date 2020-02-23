@@ -11,4 +11,4 @@ clean:
 	rm -f proxy *.o
 
 tar:
-	tar -cvzf cos461_ass2_$(USER).tgz proxy.c README Makefile
+	tar -cvzf CS3205_Assignment3_$(USER).tar.gz proxy.c README Makefile
