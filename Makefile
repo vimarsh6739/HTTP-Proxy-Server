@@ -1,14 +1,15 @@
-CC=g++
-CFLAGS= -g -Wall -Werror
+CC=gcc
+CFLAGS= -g -Wall
 
 all: proxy
 
 proxy: proxy.c
+	$(CC) $(CFLAGS) -o proxy_parse.o -c proxy_parse.c
 	$(CC) $(CFLAGS) -o proxy.o -c proxy.c
-	$(CC) $(CFLAGS) -o proxy proxy.o
+	$(CC) $(CFLAGS) -o proxy proxy_parse.o proxy.o
 
 clean:
 	rm -f proxy *.o
 
 tar:
-	tar -cvzf CS3205_Assignment3_$(USER).tar.gz proxy.c README Makefile
+	tar -cvzf cos461_ass1_$(USER).tgz proxy.c README Makefile proxy_parse.c proxy_parse.h
