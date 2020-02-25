@@ -12,7 +12,7 @@ void error(char *msg)
 }
 
 //Function to parse incoming message from accept(socket())
-void parse(int sock){
+int parse(int sock){
   //In child process for server
 
   int n; //ret value for read and write calls
@@ -22,11 +22,40 @@ void parse(int sock){
   n = read(sock,buffer,8191);
   if(n<0) error("[-]Couldnt read from socket");
   
-  printf("Received query:\n %s",buffer);
-  //Parse message in buffer : TODO
+  //printf("Received query:\n %s",buffer);
+  int len = strlen(buffer);
+
+  //Parse message in buffer
+  struct ParsedRequest*  req = ParsedRequest_create();
+
+  if (ParsedRequest_parse(req, buffer, len) < 0) {
+    printf("parse failed\n");
+    return -1;
+  }
+
+  printf("Method:%s\n", req->method);
+  printf("Host:%s\n", req->host);
+
+  int rlen = ParsedRequest_totalLen(req);
+  char *b = (char *)malloc(rlen+1);
+  if (ParsedRequest_unparse(req, b, rlen) < 0) {
+    printf("unparse failed\n");
+    return -1;
+  }
+
+  b[rlen]='\0';
+
+  struct ParsedHeader *r = ParsedHeader_get(req, "If-Modified-Since");
+  printf("Modified value: %s\n", r->value);
+
+  ParsedRequest_destroy(req);
+
   
-  //Return result of GET query :TODO
+  //Return result of GET query :
   
+  //n = write(sock,buffer,strlen(buffer));
+  //if(n<0) error("[-]Couldnt write to socket");
+  return 0;
 }
 
 int main(int argc, char * argv[]) {
@@ -79,7 +108,7 @@ int main(int argc, char * argv[]) {
       //in child
       //close the original socket connection. Communicate only using newsockfd
       close(sockfd);  
-      parse(newsockfd);
+      int rv = parse(newsockfd);
       exit(0);
     }
     else {
