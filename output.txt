@@ -1,4 +1,0 @@
-GET http://www.google.com:80/index.html/ HTTP/1.0
-Content-Length:80
-If-Modified-Since: Sat, 29 Oct 1994 19:43:31 GMT
-

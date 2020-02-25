@@ -4,6 +4,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netdb.h> 
+#include <time.h>
+#include <sys/wait.h>
 
 void error(char *msg)
 {
@@ -12,49 +15,105 @@ void error(char *msg)
 }
 
 //Function to parse incoming message from accept(socket())
-int parse(int sock){
-  //In child process for server
+int parse(int cli_sock){
 
-  int n; //ret value for read and write calls
-  char buffer[8192]; //8 KB buffer for messages
+  int n; //ret value for read() and write()
+  char buffer[65535]; //request buffer
   
-  bzero(buffer,8192);
-  n = read(sock,buffer,8191);
-  if(n<0) error("[-]Couldnt read from socket");
-  
-  //printf("Received query:\n %s",buffer);
-  int len = strlen(buffer);
+  bzero(buffer,65535);
+  //Read client request
+  n = read(cli_sock,buffer,8191);
+  if(n<0) error("Couldnt read from socket");
+  int req_len = strlen(buffer);
 
-  //Parse message in buffer
+  //Parse request
   struct ParsedRequest*  req = ParsedRequest_create();
-
-  if (ParsedRequest_parse(req, buffer, len) < 0) {
-    printf("parse failed\n");
+  if (ParsedRequest_parse(req, buffer, req_len) < 0) {
+    bzero(buffer,8192);
+    sprintf(buffer,"HTTP/1.0 400 Bad Request\r\n\r\n");
+    n = write(cli_sock,buffer,strlen(buffer));
+    if(n<0)error("Couldnt write to socket");
     return -1;
   }
 
-  printf("Method:%s\n", req->method);
-  printf("Host:%s\n", req->host);
+  //Send GET request to actual server-proxy acts as client now
+  int sockfd; 
+  int portno; 
+  struct sockaddr_in serv_addr_actual;  //address of server
+  struct hostent *server_actual;  //host computer of server
 
-  int rlen = ParsedRequest_totalLen(req);
-  char *b = (char *)malloc(rlen+1);
-  if (ParsedRequest_unparse(req, b, rlen) < 0) {
-    printf("unparse failed\n");
+  if(req->port == NULL){
+    portno = 80;
+  }
+  else{
+    portno = strtol(req->port,(char **)NULL,10);
+  }
+
+  sockfd = socket(AF_INET,SOCK_STREAM,0);
+  if(sockfd < 0)error("Couldn't open socket in child proc");
+  
+  //gethostbyname() queries databases around the country
+  server_actual = gethostbyname(req->host);
+
+  if(server_actual==NULL){
+    //404!
+    bzero(buffer,8192);
+    sprintf(buffer,"HTTP/1.0 404 Not Found\r\n\r\n");
+    n = write(cli_sock,buffer,strlen(buffer));
+    if(n<0)error("[-]Couldnt write to socket");
     return -1;
   }
 
-  b[rlen]='\0';
+  //set fields of address
+  bzero((char *) &serv_addr_actual, sizeof(serv_addr_actual));
+  serv_addr_actual.sin_family = AF_INET;
+  bcopy((char *)server_actual->h_addr,(char *)&serv_addr_actual.sin_addr.s_addr,server_actual->h_length);
+  serv_addr_actual.sin_port = htons(portno);
 
-  struct ParsedHeader *r = ParsedHeader_get(req, "If-Modified-Since");
-  printf("Modified value: %s\n", r->value);
+  //establish connection to og server
+  if(connect(sockfd,(struct sockaddr *)&serv_addr_actual
+  ,sizeof(serv_addr_actual)) < 0){
+    error("Couldn't establish connection to server");
+  }
 
-  ParsedRequest_destroy(req);
-
+  //Modify request to server 
   
-  //Return result of GET query :
+  n = ParsedHeader_set(req,"Host",req->host);
+  if(n < 0){error("parse set host failed");}
   
-  //n = write(sock,buffer,strlen(buffer));
-  //if(n<0) error("[-]Couldnt write to socket");
+  n = ParsedHeader_set(req,"Connection","close");
+  if(n < 0){error("parse_set connection failed");}
+
+  //length of modified request
+  int mod_len = ParsedRequest_totalLen(req);
+  char* mod_buf = (char*)malloc(mod_len+1);
+  if(ParsedRequest_unparse(req,mod_buf,mod_len) < 0){
+    error("unparse failed");
+  }
+  mod_buf[mod_len] = '\0';
+
+  //Write to og server
+  n = write(sockfd,mod_buf,mod_len);
+  if (n < 0){
+    error("couldn't write to original server");
+  }
+
+  //Read result from og server
+  bzero(buffer,65535);
+  n = read(sockfd,buffer,65535);
+  if(n<0){
+    error("couldnt read from original server");
+  }
+
+  //Close og server side socket
+  // close(sockfd);
+  //Return result of GET query to client
+  n = write(cli_sock,buffer,strlen(buffer));
+  if(n<0){
+    error("couldn't write to client");
+  }
+  //Close client side socket
+  // close(cli_sock);
   return 0;
 }
 
@@ -70,12 +129,12 @@ int main(int argc, char * argv[]) {
   struct sockaddr_in cli_addr;  //client address 
 
   if (argc < 2) {
-    error("ERROR, no port provided\n");
+    error("error, no port provided\n");
   }
 
   //init socket
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd < 0) error("ERROR opening socket");
+  if (sockfd < 0) error("error opening socket");
   //set server addr to 0 - like memset
   bzero((char *) &serv_addr, sizeof(serv_addr));
   //init server_addr
@@ -86,7 +145,7 @@ int main(int argc, char * argv[]) {
   //Bind socket
   if (bind(sockfd, (struct sockaddr *) &serv_addr,
       sizeof(serv_addr)) < 0) 
-      error("ERROR on binding");
+      error("error on binding");
   //listen with wait queue of 5 clients max
   listen(sockfd,5);
   clilen = sizeof(cli_addr);
@@ -95,13 +154,13 @@ int main(int argc, char * argv[]) {
     //Accept-blocking fifo semantics
     newsockfd = accept(sockfd,(struct sockaddr* ) &cli_addr, (socklen_t*)&clilen);
     if(newsockfd < 0){
-      error("[-]Couldnt accept incoming connection");
+      error("Couldnt accept incoming connection");
     }
 
     pid = fork();
     
     if(pid < 0){
-      error("[-]error on forking new process");
+      error("error on forking new process");
     }
 
     if(pid==0){
@@ -109,10 +168,13 @@ int main(int argc, char * argv[]) {
       //close the original socket connection. Communicate only using newsockfd
       close(sockfd);  
       int rv = parse(newsockfd);
+      
       exit(0);
     }
     else {
       //in parent
+      sleep(1);
+      //Might cause problems in retrieval
       close(newsockfd);
     }
   }
