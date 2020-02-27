@@ -22,8 +22,8 @@ int parse(int cli_sock){
   
   bzero(buffer,65535);
   //Read client request
-  n = read(cli_sock,buffer,8191);
-  if(n<0) error("Couldnt read from socket");
+  n = read(cli_sock,buffer,65534);
+  if(n<0) error("Couldn't read from socket");
   int req_len = strlen(buffer);
 
   //Parse request
@@ -32,7 +32,7 @@ int parse(int cli_sock){
     bzero(buffer,8192);
     sprintf(buffer,"HTTP/1.0 400 Bad Request\r\n\r\n");
     n = write(cli_sock,buffer,strlen(buffer));
-    if(n<0)error("Couldnt write to socket");
+    if(n<0)error("Couldn't write to socket");
     return -1;
   }
 
@@ -60,10 +60,9 @@ int parse(int cli_sock){
     bzero(buffer,8192);
     sprintf(buffer,"HTTP/1.0 404 Not Found\r\n\r\n");
     n = write(cli_sock,buffer,strlen(buffer));
-    if(n<0)error("[-]Couldnt write to socket");
+    if(n<0)error("[-]Couldn't write to socket");
     return -1;
   }
-
   //set fields of address
   bzero((char *) &serv_addr_actual, sizeof(serv_addr_actual));
   serv_addr_actual.sin_family = AF_INET;

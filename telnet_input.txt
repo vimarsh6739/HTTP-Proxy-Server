@@ -1,4 +1,2 @@
-GET http://www.cse.iitm.ac.in/ HTTP/1.0
+GET http://www.google.com/ HTTP/1.0
 
-
- 
