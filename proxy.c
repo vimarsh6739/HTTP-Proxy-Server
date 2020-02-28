@@ -96,21 +96,35 @@ int parse(int cli_sock){
   if (n < 0){
     error("couldn't write to original server");
   }
-
-  //Read result from og server
-  bzero(buffer,65535);
-  n = read(sockfd,buffer,65535);
-  if(n<0){
-    error("couldnt read from original server");
-  }
-
+	
+  //Read result from og server-enclose it in a loop until the entire message is read
+ 	//char buffer2[65535];
+	//int length_buf = 0;
+  //Simaltaneously read and write.
+	while(1){
+	 	bzero(buffer,65535);
+  	n = read(sockfd,buffer,65534);
+  	if(n<0){
+    	error("couldnt read from original server");
+			break;
+  	}
+		if(n==0){
+			break;
+		}
+    n = write(cli_sock,buffer,strlen(buffer));
+    if(n<0){
+      error("couldn't write to client");
+    }
+		// length_buf += sprintf(buffer + length_buf,buffer2);
+	} 
+ 
   //Close og server side socket
   // close(sockfd);
   //Return result of GET query to client
-  n = write(cli_sock,buffer,strlen(buffer));
+  /*n = write(cli_sock,buffer,strlen(buffer));
   if(n<0){
     error("couldn't write to client");
-  }
+  }*/
   //Close client side socket
   // close(cli_sock);
   return 0;
@@ -172,7 +186,7 @@ int main(int argc, char * argv[]) {
     }
     else {
       //in parent
-      sleep(1);
+      //sleep(1);
       //Might cause problems in retrieval
       close(newsockfd);
     }

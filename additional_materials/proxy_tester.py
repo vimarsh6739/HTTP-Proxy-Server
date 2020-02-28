@@ -37,10 +37,7 @@ except ImportError:
 # produce unexpected results, including the abnormal termination
 # of the testing script.
 # 
-pub_urls = ['http://www.mit.edu/', 'HTTP://WWW.stanford.edu/', 
-               'http://sns.cs.princeton.edu/',
-               'http://yuba.stanford.edu/vns/',
-               'http://yuba.stanford.edu/vns/images/su.gif'] 
+pub_urls = ['http://www.cse.iitm.ac.in/', 'HTTP://www.cc.iitm.ac.in/'] 
 
 
 # timeout_secs - Individual tests will be killed if they do not
