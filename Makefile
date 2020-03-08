@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS= -g -Wall
+CFLAGS= -g -Wall -O3
 
 all: proxy request
 
@@ -15,4 +15,6 @@ clean:
 	rm -f proxy request *.o
 
 tar:
-	tar -cvzf cos461_ass1_$(USER).tgz proxy.c README Makefile proxy_parse.c proxy_parse.h
+	mkdir -p Assignment3-CS17B006-CS17B046
+	cp -t Assignment3-CS17B006-CS17B046 proxy.c README Makefile proxy_parse.c proxy_parse.h 
+	tar -cvzf Assignment3-CS17B006-CS17B046.tgz Assignment3-CS17B006-CS17B046/*

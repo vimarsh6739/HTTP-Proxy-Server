@@ -21,18 +21,19 @@ int parse(int cli_sock){
   char buffer[65536]; //request buffer
   char buf_temp[65536];
   int req_len=0;
-  bzero(buffer,65536);
+  memset(&buffer,0,65536);
+  memset(&buf_temp,0,65536);
 
-  bzero(buf_temp,65536);
   n = read(cli_sock,buf_temp,65535);
   if(n<0) error("Couldn't read from socket");
   req_len = strlen(buf_temp);	
+  
   sprintf(buffer+strlen(buffer),buf_temp);
 
   //split request- client has to send more information
   if(req_len > 0 && strcmp(&buf_temp[req_len-4],"\r\n\r\n")!=0){
   	//read the remaining request
-	bzero(buf_temp,65536);
+	memset(&buf_temp,0,65536);
 	n = read(cli_sock,buf_temp,65535);
 	if(n<0) error("Couldn't read from socket");
 	req_len += strlen(buf_temp);
@@ -45,7 +46,7 @@ int parse(int cli_sock){
   //Parse request
   struct ParsedRequest*  req = ParsedRequest_create();
   if (ParsedRequest_parse(req, buffer, req_len) < 0) {
-    bzero(buffer,8192);
+    memset(&buffer,0,8192);
     sprintf(buffer,"HTTP/1.0 400 Bad Request\r\n\r\n");
     n = write(cli_sock,buffer,strlen(buffer));
     if(n<0)error("Couldn't write to socket");
@@ -73,16 +74,17 @@ int parse(int cli_sock){
 
   if(server_actual==NULL){
     //404!
-    bzero(buffer,8192);
+    memset(&buffer,0,65536);
     sprintf(buffer,"HTTP/1.0 404 Not Found\r\n\r\n");
     n = write(cli_sock,buffer,strlen(buffer));
     if(n<0)error("[-]Couldn't write to socket");
     return -1;
   }
   //set fields of address
-  bzero((char *) &serv_addr_actual, sizeof(serv_addr_actual));
+  memset(&serv_addr_actual, 0,sizeof(serv_addr_actual));
   serv_addr_actual.sin_family = AF_INET;
-  bcopy((char *)server_actual->h_addr,(char *)&serv_addr_actual.sin_addr.s_addr,server_actual->h_length);
+  memcpy(&serv_addr_actual.sin_addr.s_addr,server_actual->h_addr,server_actual->h_length);
+  // bcopy((char *)server_actual->h_addr,(char *)&serv_addr_actual.sin_addr.s_addr,server_actual->h_length);
   serv_addr_actual.sin_port = htons(portno);
 
   //establish connection to og server
@@ -118,7 +120,7 @@ int parse(int cli_sock){
 	//int length_buf = 0;
   //Simaltaneously read and write.
 	while(1){
-	bzero(buffer,65536);
+	memset(&buffer,0,65536);
   	n = read(sockfd,buffer,65535);
   	if(n<0){
     	error("couldnt read from original server");
@@ -165,7 +167,8 @@ int main(int argc, char * argv[]) {
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0) error("error opening socket");
   //set server addr to 0 - like memset
-  bzero((char *) &serv_addr, sizeof(serv_addr));
+  // bzero((char *) &serv_addr, sizeof(serv_addr));
+  memset(&serv_addr,0,sizeof(serv_addr));
   //init server_addr
   portno = atoi(argv[1]);
   serv_addr.sin_family = AF_INET;
@@ -197,7 +200,7 @@ int main(int argc, char * argv[]) {
       //close the original socket connection. Communicate only using newsockfd
       close(sockfd);  
       int rv = parse(newsockfd);
-      
+      if(rv==0);
       exit(0);
     }
     else {
