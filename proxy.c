@@ -18,14 +18,30 @@ void error(char *msg)
 int parse(int cli_sock){
 
   int n; //ret value for read() and write()
-  char buffer[65535]; //request buffer
-  
-  bzero(buffer,65535);
-  //Read client request
-  n = read(cli_sock,buffer,65534);
-  if(n<0) error("Couldn't read from socket");
-  int req_len = strlen(buffer);
+  char buffer[65536]; //request buffer
+  char buf_temp[65536];
+  int req_len=0;
+  bzero(buffer,65536);
 
+  bzero(buf_temp,65536);
+  n = read(cli_sock,buf_temp,65535);
+  if(n<0) error("Couldn't read from socket");
+  req_len = strlen(buf_temp);	
+  sprintf(buffer+strlen(buffer),buf_temp);
+
+  //split request- client has to send more information
+  if(req_len > 0 && strcmp(&buf_temp[req_len-4],"\r\n\r\n")!=0){
+  	//read the remaining request
+	bzero(buf_temp,65536);
+	n = read(cli_sock,buf_temp,65535);
+	if(n<0) error("Couldn't read from socket");
+	req_len += strlen(buf_temp);
+	sprintf(buffer+strlen(buffer),buf_temp);
+  }
+  else {
+  	//entire get request is received
+  }
+  
   //Parse request
   struct ParsedRequest*  req = ParsedRequest_create();
   if (ParsedRequest_parse(req, buffer, req_len) < 0) {
@@ -102,15 +118,15 @@ int parse(int cli_sock){
 	//int length_buf = 0;
   //Simaltaneously read and write.
 	while(1){
-	 	bzero(buffer,65535);
-  	n = read(sockfd,buffer,65534);
+	bzero(buffer,65536);
+  	n = read(sockfd,buffer,65535);
   	if(n<0){
     	error("couldnt read from original server");
 			break;
   	}
-		if(n==0){
-			break;
-		}
+	if(n==0){
+		break;
+	}
     n = write(cli_sock,buffer,strlen(buffer));
     if(n<0){
       error("couldn't write to client");
