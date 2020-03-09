@@ -16,5 +16,5 @@ clean:
 
 tar:
 	mkdir -p Assignment3-CS17B006-CS17B046
-	cp -t Assignment3-CS17B006-CS17B046 proxy.c README Makefile proxy_parse.c proxy_parse.h 
+	cp -t Assignment3-CS17B006-CS17B046 proxy.c README Makefile proxy_parse.c proxy_parse.h CS3205_Assignment3_Report.pdf 
 	tar -cvzf Assignment3-CS17B006-CS17B046.tgz Assignment3-CS17B006-CS17B046/*
