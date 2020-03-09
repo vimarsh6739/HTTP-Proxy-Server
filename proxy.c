@@ -123,7 +123,7 @@ int parse(int cli_sock){
 	memset(&buffer,0,65536);
   	n = read(sockfd,buffer,65535);
   	if(n<0){
-    	error("couldnt read from original server");
+    	error("couldn't read from original server");
 			break;
   	}
 	if(n==0){
@@ -186,7 +186,7 @@ int main(int argc, char * argv[]) {
     //Accept-blocking fifo semantics
     newsockfd = accept(sockfd,(struct sockaddr* ) &cli_addr, (socklen_t*)&clilen);
     if(newsockfd < 0){
-      error("Couldnt accept incoming connection");
+      error("Couldn't accept incoming connection");
     }
 
     pid = fork();
